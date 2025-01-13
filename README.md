@@ -135,6 +135,7 @@
 
    论元范围识别采用P、R、F1作为评价指标：
    
+   
    $${\rm{precision}} = \frac{{{\rm{InterSec(gold,pred)}}}}{{{\rm{Len(pred)}}}}$$
    
    $${\rm{recall}} = \frac{{{\rm{InterSec(gold,pred)}}}}{{{\rm{Len(gold)}}}}$$
@@ -170,6 +171,7 @@
 
 ### 3. 评测指标
 论元角色识别采用P、R、F1作为评价指标：
+
    $${\rm{precision}} = \frac{{{\rm{Count(gold \cap pred)}}}} {{{\rm{Count(pred)}}}}$$  
    
    $${\rm{recall}} = \frac{{{\rm{Count(gold \cap pred)}}}} {{{\rm{Count(gold)}}}}$$  
@@ -209,4 +211,5 @@
 
 # 组织者和联系人
 评测组织者：李茹、谭红叶（山西大学）；常宝宝（北京大学）；戴新宇（南京大学）
+
 任务联系人：许豪（山西大学硕士生，202322407052@email.sxu.edu.cn）
