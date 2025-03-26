@@ -4,7 +4,7 @@
 
 
 <div align=center>
-<img src="./img/CCL2025-task2-第三届汉语框架语义解析评测-参赛群二维码.jpg" width="30%" height="30%" />
+<img src="./CCL2025-task2-第三届汉语框架语义解析评测-参赛群二维码.jpg" width="30%" height="30%" />
 </div>
 
 
