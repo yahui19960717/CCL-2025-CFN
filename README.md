@@ -1,7 +1,7 @@
 # 更新日志
 
 * <font  color="red">请参赛选手到算法比赛页面参与评测，<font  color="red">赛制规则和赛程安排以算法比赛页面为准</font>，算法比赛主页链接：   
-   [CCL2023-Eval 汉语框架语义解析评测_算法大赛]([https://tianchi.aliyun.com/competition/entrance/532083/introduction](https://tianchi.aliyun.com/competition/entrance/532338))
+   [CCL2023-Eval 汉语框架语义解析评测_算法大赛](https://tianchi.aliyun.com/competition/entrance/532083/introduction](https://tianchi.aliyun.com/competition/entrance/532338)
 
 * <font  color="red">报名方式更新</font>：分为以下两个步骤，更多报名细节见算法比赛首页： [CCL2023-Eval 汉语框架语义解析评测](https://tianchi.aliyun.com/competition/entrance/532338)。
 
