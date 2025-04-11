@@ -1,3 +1,12 @@
+# Baseline
+Baseline下载地址：[Github](https://github.com/SXUCFN/The-2nd-Chinese-Frame-Semantic-Parsing)
+Baseline表现：
+
+|task1_acc|task2_f1|task3_f1|task_score|
+|---------|--------|--------|----------|
+|70.83|83.06|57.08|69.00|
+  
+
 # 更新日志
 
 * <font  color="red">请参赛选手到算法比赛页面参与评测，<font  color="red">赛制规则和赛程安排以算法比赛页面为准</font>。
