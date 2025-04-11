@@ -1,7 +1,7 @@
 # Baseline
 Baseline详情见baseline文件夹
 
-Baseline表现：
+Baseline性能表现：
 
 |task1_acc|task2_f1|task3_f1|task_score|
 |---------|--------|--------|----------|
