@@ -1,5 +1,5 @@
 # Baseline
-Baseline详情见baseline文件夹
+Baseline详情见baseline文件夹 [Github](https://github.com/SXUNLP/The-3nd-Chinese-Frame-Semantic-Parsing)
 
 Baseline性能表现：
 
