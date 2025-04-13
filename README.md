@@ -1,4 +1,4 @@
-# 赛程安排 
+# 赛程安排更新
 
 本次大赛分为报名组队、A榜、B榜三个阶段，具体安排和要求如下：
 
@@ -38,27 +38,6 @@ Baseline性能表现：
 |---------|--------|--------|----------|
 |70.83|83.06|57.08|69.00|
   
-
-  
-
-
-
-
-
-
-
-
-
-
-
-# Baseline
-Baseline详情见baseline文件夹 [Github](https://github.com/SXUNLP/The-3nd-Chinese-Frame-Semantic-Parsing)
-
-Baseline性能表现：
-
-|task1_acc|task2_f1|task3_f1|task_score|
-|---------|--------|--------|----------|
-|70.83|83.06|57.08|69.00|
   
 
 # 更新日志
