@@ -1,3 +1,54 @@
+# 赛程安排 
+
+本次大赛分为报名组队、A榜、B榜三个阶段，具体安排和要求如下：
+
+1.  <font  color="red">报名时间：2025年2月1日-5月10日</font>
+    
+2.  训练、验证数据发布：2025年4月10日
+    
+3.  测试A榜数据发布：2025年4月11日
+    
+4.  <font  color="red">测试A榜评测截止：2025年5月5日 17:59:59</font>
+    
+5.  测试B榜数据发布：2025年5月7日
+    
+6.  <font  color="red">测试B榜最终测试结果：2025年5月9日 23:59:59</font>
+    
+7.  公布测试结果：2025年5月10日
+    
+8.  提交中文或英文技术报告截止时间：2025年5月20日
+    
+9.  中文或英文技术报告反馈（录用通知）：2025年6月1日
+    
+10.  正式提交中英文评测论文（Camera-Ready）截止时间：2025年6月10日
+    
+11.  公布获奖名单：2025年6月15日
+    
+12.  评测研讨会：2025年8月11日
+
+<font  color="red">**注意：报名组队与实名认证（2025年2月1日—5月9日）**</font>
+
+
+# Baseline
+Baseline详情见链接baseline文件夹 [Github](https://github.com/SXUNLP/The-3nd-Chinese-Frame-Semantic-Parsing)
+
+Baseline性能表现：
+
+|task1_acc|task2_f1|task3_f1|task_score|
+|---------|--------|--------|----------|
+|70.83|83.06|57.08|69.00|
+  
+
+
+
+
+
+
+
+
+
+
+
 # Baseline
 Baseline详情见baseline文件夹 [Github](https://github.com/SXUNLP/The-3nd-Chinese-Frame-Semantic-Parsing)
 
