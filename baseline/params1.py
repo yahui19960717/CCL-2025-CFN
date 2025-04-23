@@ -9,7 +9,7 @@ def construct_hyper_param():
     # train settings
     parser.add_argument('--num_train_epochs', default=10, type=int)
     parser.add_argument('--warmup_proportion', default=0.1, type=float)
-    parser.add_argument("--batch_size", default=9, type=int,
+    parser.add_argument("--batch_size", default=9, type=int, # 12
                         help="Batch size") # 3
     parser.add_argument("--update_freq", default=1, type=int,
                         help="update_freq")
@@ -52,10 +52,16 @@ def construct_hyper_param():
     parser.add_argument("--gamma",
                         default=1.0,
                         type=float,
-                        help="gamma")   
+                        help="gamma")
+    parser.add_argument("--use_pos",
+                        action='store_true',
+                        help="use_pos")
+    parser.add_argument("--use_dep",
+                        action='store_true',
+                        help="use_dep") 
     parser.add_argument("--use_ws",
                         action='store_true',
-                        help="use_ws")
+                        help="use_ws")   
 
     parser.add_argument("--embed_file",
                         # default='./chinese_bert_wwm_ext/vocab.txt',
@@ -66,7 +72,6 @@ def construct_hyper_param():
                         action='store_true',
                         help="use_embedding")
     args = parser.parse_args()
-
 
     return args
 

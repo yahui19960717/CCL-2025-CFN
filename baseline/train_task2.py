@@ -9,9 +9,11 @@ from tqdm import tqdm
 from transformers import AdamW
 from transformers import BertConfig, BertTokenizer, BertForTokenClassification
 from dataset_task2 import Dataset
-from params import args
+from params2 import args
 from model_task2 import Model
-
+from datetime import datetime
+from differance_time import get_time_diff
+import json
 
 class FGM():
     def __init__(self, model):
@@ -41,10 +43,10 @@ def warmup_linear(x, warmup=0.002):
     return max((x - 1.) / (warmup - 1.), 0)
 
 
-def get_model_input(data, device=None):
+def get_model_input(data, device=None, ws=False, use_embedding=False):
     """
 
-    :param data: input_ids1, input_ids2, label_starts, label_ends, true_label
+    :param data: input_ids1, input_ids2, label_starts, label_ends, true_label, 
     :return:
     """
 
@@ -53,6 +55,7 @@ def get_model_input(data, device=None):
 
     bs = len(data)
     max_len = max([len(x[0]) for x in data])
+    max_len_words = 0 if use_embedding==False else max([len(x[-1]) for x in data])
 
     input_ids_list = []
     attention_mask_list = []
@@ -60,7 +63,8 @@ def get_model_input(data, device=None):
     target_cls = []
     labels = []
     sentence_id = []
-
+    ws_label = []
+    word_indices = []
     for d in data:
         input_ids_list.append(pad(d[0], max_len, 0))
         attention_mask_list.append(pad(d[1], max_len, 0))
@@ -68,10 +72,13 @@ def get_model_input(data, device=None):
         labels.append(d[3])
         sentence_id.append(d[4])
         target_cls.append(d[5])
-
-    input_ids = np.array(input_ids_list, dtype=np.compat.long)
-    attention_mask = np.array(attention_mask_list, dtype=np.compat.long)
-    target_cls = np.array(target_cls, dtype=np.compat.long)
+        if ws:
+            ws_label.append(pad(d[6], max_len, 0))
+        if use_embedding:
+            word_indices.append(pad(d[7], max_len_words, 0))
+    input_ids = np.array(input_ids_list, dtype=np.int64)
+    attention_mask = np.array(attention_mask_list, dtype=np.int64)
+    target_cls = np.array(target_cls, dtype=np.int64)
 
     input_ids = torch.from_numpy(input_ids).to(device)
     attention_mask = torch.from_numpy(attention_mask).to(device)
@@ -82,7 +89,15 @@ def get_model_input(data, device=None):
         for idx in labels[i]:
             H_label[i][idx[0], idx[1]] = 1
 
-    return input_ids, attention_mask, target, H_label, sentence_id, target_cls
+    if ws:
+        ws_label = np.array(ws_label, dtype=np.int64)
+        ws_label = torch.from_numpy(ws_label).to(device)
+    if use_embedding:
+        word_indices = np.array(word_indices, dtype=np.int64)
+        word_indices = torch.from_numpy(word_indices).to(device)
+
+
+    return input_ids, attention_mask, target, H_label, sentence_id, target_cls, ws_label, word_indices
 
 
 def eval(model, val_loader):
@@ -92,10 +107,10 @@ def eval(model, val_loader):
     H_recall_total = 0.0
     with torch.no_grad():
         for step, batch in tqdm(enumerate(val_loader), total=len(val_loader), desc='eval'):
-            input_ids, attention_mask, target, label, sentence_id, target_cls = batch
+            input_ids, attention_mask, target, label, sentence_id, target_cls, ws_label, word_indices = batch
 
             output = model(input_ids=input_ids, attention_mask=attention_mask, target=target, labels=label,
-                           device=device, for_test=True)
+                           device=device, for_test=True, ws_label=ws_label, word_indices=word_indices)
 
             # output = model(input_ids=input_ids, attention_mask=attention_mask, labels=label)
 
@@ -121,7 +136,7 @@ def eval(model, val_loader):
     return H_precision, H_recall
 
 
-def train(model, train_loader, val_loader):
+def train(model, train_loader, val_loader, exp_name):
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
@@ -157,10 +172,10 @@ def train(model, train_loader, val_loader):
         for step, batch in enumerate(iter_bar):
             global_step += 1
 
-            input_ids, attention_mask, target, label, sentence_id, target_cls = batch
+            input_ids, attention_mask, target, label, sentence_id, target_cls, ws_label, word_indices = batch
 
             output = model(input_ids=input_ids, attention_mask=attention_mask, target=target, labels=label,
-                           device=device)
+                           device=device, ws_label=ws_label, word_indices=word_indices)
 
             # output = model(input_ids=input_ids, attention_mask=attention_mask, labels=label)
 
@@ -177,8 +192,7 @@ def train(model, train_loader, val_loader):
             fgm.attack()  # embedding被修改了
             # optimizer.zero_grad() # 如果不想累加梯度，就把这里的注释取消
             loss_sum = model(input_ids=input_ids, attention_mask=attention_mask, target=target, labels=label,
-                               device=device)[
-                    'loss']
+                               device=device, ws_label=ws_label, word_indices=word_indices)['loss']
             # loss_sum = model(input_ids=input_ids, attention_mask=attention_mask, labels=label)["loss"]
             loss_sum.backward()  # 反向传播，在正常的grad基础上，累加对抗训练的梯度
             fgm.restore()  # 恢复Embedding的参数
@@ -194,8 +208,6 @@ def train(model, train_loader, val_loader):
                 optimizer.zero_grad()
                 global_step += 1
 
-            # break
-
         H_precision, H_recall = eval(model, val_loader)
         f1 = 2 * H_precision * H_recall / (H_precision + H_recall + 1e-6)
         if f1 > best_f1:
@@ -204,7 +216,7 @@ def train(model, train_loader, val_loader):
             best_f1 = f1
             model_to_save = model.module if hasattr(model, 'module') else model
             os.makedirs('saves', exist_ok=True)
-            torch.save(model_to_save.state_dict(), f'saves/model_task2_best.bin')
+            torch.save(model_to_save.state_dict(), exp_name)
         else:
             print(f'current f1: {f1}')
             print(f" H_precision: {H_precision}, H_recall: {H_recall}")
@@ -225,24 +237,61 @@ def load_pretrained_bert(bert_model, init_checkpoint):
 
 
 if __name__ == '__main__':
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    start_time = datetime.now()
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    np.random.seed(1)
+    torch.manual_seed(1)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     tokenizer = BertTokenizer(vocab_file=args.vocab_file,
                               do_lower_case=True)
 
-    train_dataset = Dataset("./dataset/cfn-train.json",
+    # train_dataset = Dataset("./dataset/cfn-train.json",
+    #                         "./dataset/frame_info.json",
+    #                         tokenizer)
+    # dev_dataset = Dataset("./dataset/cfn-dev.json",
+    #                       "./dataset/frame_info.json",
+    #                       tokenizer)
+    # args.use_ws = True
+    # args.use_embedding = True
+    args.use_spanwide = True
+    train_dataset = Dataset("./dataset/cfn_ws/cfn-train-ws.json",
                             "./dataset/frame_info.json",
-                            tokenizer)
-    dev_dataset = Dataset("./dataset/cfn-dev.json",
+                            tokenizer,
+                            ws=args.use_ws,
+                            embed_file=args.embed_file,
+                            use_embedding=args.use_embedding)
+    dev_dataset = Dataset("./dataset/cfn_ws/cfn-dev-ws.json",
                           "./dataset/frame_info.json",
-                          tokenizer)
+                          tokenizer,
+                          ws=args.use_ws,
+                          embed_file=args.embed_file,
+                          use_embedding=args.use_embedding)
+    # exp_name = f'saves/model_task2_best_roberta_large_targetembedding.bin'
+    exp_name = f'saves/model_task2_best_roberta_large_ceshi.bin'
+       
+
 
     config = BertConfig.from_json_file(args.config_file)
     # BertConfig.from_pretrained('hfl/chinese-bert-wwm-ext')
     config.num_labels = 1
     config.max_cls = train_dataset.max_cls
+    config.use_ws = args.use_ws
+    config.use_embedding = args.use_embedding
+    config.use_spanwide = args.use_spanwide
+    if args.use_embedding:
+        config.pretrained_embeddings = torch.tensor(train_dataset.embeddings, dtype=torch.float32).to(device)
+    
     model = Model(config)
+
+   ###### 输出model的config和args ######
+    print(f'Arguments (args): ')
+    print(json.dumps(args.__dict__, indent=2))
+    # print(f"\n Model Config: ")
+    # print(json.dumps(model.config.__dict__, indent=2))
+ 
     # load_pretrained_bert(model, args.init_checkpoint)
     state = torch.load(args.init_checkpoint, map_location='cpu')
     msg = model.load_state_dict(state, strict=False)
@@ -254,7 +303,7 @@ if __name__ == '__main__':
         dataset=train_dataset,
         shuffle=True,
         num_workers=0,
-        collate_fn=partial(get_model_input, device=device),
+        collate_fn=partial(get_model_input, device=device, ws=args.use_ws, use_embedding=args.use_embedding),
         drop_last=True
     )
 
@@ -263,7 +312,9 @@ if __name__ == '__main__':
         dataset=dev_dataset,
         shuffle=False,
         num_workers=0,
-        collate_fn=partial(get_model_input, device=device),
+        collate_fn=partial(get_model_input, device=device, ws=args.use_ws, use_embedding=args.use_embedding),
         drop_last=False
     )
-    train(model, train_loader, val_loader)
+    train(model, train_loader, val_loader, exp_name)
+    end_time = datetime.now()
+    get_time_diff(start_time, end_time)

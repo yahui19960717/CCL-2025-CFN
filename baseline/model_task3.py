@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 from transformers import BertModel
-
-
+from focalloss import FocalLossWithLogits
+from circleloss import CircleLoss
 class Model(nn.Module):
 
     def __init__(self, config):
@@ -11,14 +11,18 @@ class Model(nn.Module):
         self.num_labels = config.num_labels
         self.inner_dim = 64
         self.bert = BertModel(config)
-        self.lstm = nn.LSTM(768, 768 // 2, num_layers=1, batch_first=True,
-                            bidirectional=True)
-        classifier_dropout = (
-            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
-        )
+        # self.lstm = nn.LSTM(768, 768 // 2, num_layers=1, batch_first=True,
+        #                     bidirectional=True)
+        input_size = config.hidden_size
+        if self.config.use_ws:
+            self.ws_embedding = nn.Embedding(5, 32)
+            input_size += 32
+        if self.config.use_embedding:
+            self.word_embedding = nn.Embedding.from_pretrained(self.config.pretrained_embeddings, freeze=False)
+            input_size += 300
+        self.dense = nn.Linear(input_size, config.num_labels * self.inner_dim * 2)
 
-        self.dropout = nn.Dropout(classifier_dropout)
-        self.dense = nn.Linear(config.hidden_size, config.num_labels * self.inner_dim * 2)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
 
     def sinusoidal_position_embedding(self, batch_size, seq_len, output_dim, device):
@@ -33,11 +37,18 @@ class Model(nn.Module):
         embeddings = embeddings.to(device)
         return embeddings
 
-    def forward(self, input_ids=None, attention_mask=None, target=None, labels=None, device=None, for_test=False):
+    def forward(self, input_ids=None, attention_mask=None, target=None, labels=None, device=None, for_test=False, ws_label=None, word_indices=None):
 
         bert_out = self.bert(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
         # hidden_token = bert_out.last_hidden_state
         hidden_token = (bert_out["hidden_states"][-4] + bert_out["hidden_states"][-3] + bert_out["hidden_states"][-2] + bert_out["hidden_states"][-1]) / 4
+        if self.config.use_ws:
+            ws_emb = self.ws_embedding(ws_label)
+            hidden_token = torch.cat([hidden_token, ws_emb], dim=-1)
+        if self.config.use_embedding:
+            word_emb = self.word_embedding(word_indices)
+            word_emb = word_emb.expand(-1, hidden_token.shape[1], -1)
+            hidden_token = torch.cat([hidden_token, word_emb], dim=-1)
         outputs = self.dense(hidden_token)
         # lstm_out, (hidden, _) = self.lstm(hidden_token)
         # outputs = self.dense(lstm_out)
@@ -66,7 +77,12 @@ class Model(nn.Module):
         if for_test:
             loss = None
         else:
-            loss_fc = torch.nn.CrossEntropyLoss()
+            if self.config.focal_loss:
+                loss_fc = FocalLossWithLogits(gamma=self.config.gamma, alpha=None) 
+            # elif self.config.circle_loss:
+            #     loss_fc = CircleLoss()
+            else:   
+                loss_fc = torch.nn.CrossEntropyLoss()
             loss = loss_fc(token_logits, labels)
         return {
             "logits": token_logits,
